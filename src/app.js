@@ -13,6 +13,21 @@ const app = express();
 // ============================================
 // 1. MIDDLEWARE 
 // ============================================
+
+// CORS setup MUST be first
+app.use(cors({
+    origin: [
+        'http://localhost:5173', 
+        'http://localhost:3000', 
+        'https://bee-property.netlify.app',
+        'https://bee-property.netlify.app/',
+        process.env.FRONTEND_URL
+    ].filter(Boolean),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+}));
+
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows sending images to frontend
 
 // Stripe Webhook MUST be placed before express.json() so it can parse the raw body
@@ -22,17 +37,6 @@ app.use('/api/payments/webhook', express.raw({type: 'application/json'}), paymen
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logger
-
-// CORS setup - IMPORTANT for Frontend connection
-app.use(cors({
-    origin: [
-        'http://localhost:5173', 
-        'http://localhost:3000', 
-        'https://bee-property.netlify.app',
-        process.env.FRONTEND_URL
-    ].filter(Boolean),
-    credentials: true,
-}));
 
 // Setup static file serving for Uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
