@@ -18,9 +18,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logger
 
-// CORS setup - IMPORTANT for Railway Frontend connection
+// CORS setup - IMPORTANT for Frontend connection
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: [
+        'http://localhost:5173', 
+        'http://localhost:3000', 
+        'https://bee-property.netlify.app',
+        process.env.FRONTEND_URL
+    ].filter(Boolean),
     credentials: true,
 }));
 
