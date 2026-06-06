@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { sendSMS } = require('../utils/sms');
 
 // @desc    Get all maintenance tickets
 const getMaintenance = async (req, res) => {
@@ -22,11 +23,11 @@ const getMaintenance = async (req, res) => {
 
 // @desc    Create Maintenance
 const createMaintenance = async (req, res) => {
-    const { title, description, property_id, tenant_id, category, priority, status, vendor_name, vendor_notes } = req.body;
+    const { title, description, property_id, tenant_id, category, priority, status, vendor_id, vendor_notes } = req.body;
     try {
         const [result] = await pool.query(
-            'INSERT INTO maintenance (title, description, property_id, tenant_id, category, priority, status, vendor_name, vendor_notes, added_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [title, description, property_id, tenant_id, category, priority, status, vendor_name, vendor_notes, req.user.id]
+            'INSERT INTO maintenance (title, description, property_id, tenant_id, category, priority, status, vendor_id, vendor_notes, added_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [title, description, property_id, tenant_id, category, priority, status, vendor_id, vendor_notes, req.user.id]
         );
         res.status(201).json({ success: true, data: { id: result.insertId } });
     } catch (error) {
@@ -37,10 +38,10 @@ const createMaintenance = async (req, res) => {
 // @desc    Update Maintenance Ticket
 const updateMaintenance = async (req, res) => {
     const { id } = req.params;
-    const { title, description, property_id, tenant_id, category, priority, status, vendor_name, vendor_notes } = req.body;
+    const { title, description, property_id, tenant_id, category, priority, status, vendor_id, vendor_notes } = req.body;
     try {
-        let query = 'UPDATE maintenance SET title=?, description=?, property_id=?, tenant_id=?, category=?, priority=?, status=?, vendor_name=?, vendor_notes=? WHERE id=?';
-        let params = [title, description, property_id, tenant_id, category, priority, status, vendor_name, vendor_notes, id];
+        let query = 'UPDATE maintenance SET title=?, description=?, property_id=?, tenant_id=?, category=?, priority=?, status=?, vendor_id=?, vendor_notes=? WHERE id=?';
+        let params = [title, description, property_id, tenant_id, category, priority, status, vendor_id, vendor_notes, id];
 
         if (req.user.role === 'manager') {
             query += ' AND added_by=?';
@@ -49,6 +50,19 @@ const updateMaintenance = async (req, res) => {
 
         const [result] = await pool.query(query, params);
         if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Ticket not found' });
+
+        // Auto-dispatch SMS if vendor_id is provided and status is in_progress
+        if (vendor_id && status === 'in_progress') {
+            const [vendorRows] = await pool.query('SELECT * FROM vendors WHERE id=?', [vendor_id]);
+            if (vendorRows.length > 0) {
+                const vendor = vendorRows[0];
+                if (vendor.phone) {
+                    const smsBody = `Hi ${vendor.company_name}, you have a new maintenance ticket: "${title}". Description: ${description}. Priority: ${priority}. Please log in to BEE Property CRM for details.`;
+                    await sendSMS(vendor.phone, smsBody);
+                }
+            }
+        }
+
         res.json({ success: true, message: 'Ticket updated' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

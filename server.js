@@ -10,6 +10,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 
+// Initialize Background Cron Jobs
+const startLateFeeCron = require('./src/cron/lateFee.cron');
+startLateFeeCron();
+
 // Using the port assigned by Railway OR local 5000
 // Do not hardcode port 5000 ONLY, as Railway will crash
 const PORT = process.env.PORT || 5000;

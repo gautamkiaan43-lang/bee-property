@@ -14,6 +14,11 @@ const app = express();
 // 1. MIDDLEWARE 
 // ============================================
 app.use(helmet({ crossOriginResourcePolicy: false })); // allows sending images to frontend
+
+// Stripe Webhook MUST be placed before express.json() so it can parse the raw body
+const paymentRoutes = require('./routes/payment.routes');
+app.use('/api/payments/webhook', express.raw({type: 'application/json'}), paymentRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev')); // Logger
@@ -55,6 +60,9 @@ app.use('/api/profile', require('./routes/profile.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/leads', require('./routes/lead.routes'));
 app.use('/api/communications', require('./routes/communication.routes'));
+app.use('/api/payments', require('./routes/payment.routes')); // Added for standard JSON payment requests
+app.use('/api/docusign', require('./routes/docusign.routes')); // Added for DocuSign lease signing
+app.use('/api/ghl', require('./routes/ghl.routes')); // Added for GoHighLevel Sync
 
 // ============================================
 // 4. ERROR HANDLING
